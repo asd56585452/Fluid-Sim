@@ -109,11 +109,11 @@ public class Simulation2D : MonoBehaviour
         // Init compute
         ComputeHelper.SetBuffer(compute, positionBuffer, "Positions", externalForcesKernel, updatePositionKernel);
         ComputeHelper.SetBuffer(compute, predictedPositionBuffer, "PredictedPositions", externalForcesKernel, spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);//MoveObstacle
-        ComputeHelper.SetBuffer(compute, spatialIndices, "SpatialIndices", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);
-        ComputeHelper.SetBuffer(compute, spatialOffsets, "SpatialOffsets", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);
+        ComputeHelper.SetBuffer(compute, spatialIndices, "SpatialIndices", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, spatialOffsets, "SpatialOffsets", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);//MoveObstacle
         ComputeHelper.SetBuffer(compute, densityBuffer, "Densities", densityKernel, pressureKernel, viscosityKernel);
         ComputeHelper.SetBuffer(compute, velocityBuffer, "Velocities", externalForcesKernel, pressureKernel, viscosityKernel, updatePositionKernel);
-        ComputeHelper.SetBuffer(compute, obstaclePositionBuffer, "ObstaclePositions", updatePositionKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, obstaclePositionBuffer, "ObstaclePositions", externalForcesKernel,updatePositionKernel);//MoveObstacle
         ComputeHelper.SetBuffer(compute, obstacleNormalBuffer, "ObstacleNormals", updatePositionKernel);//MoveObstacle
 
         compute.SetInt("numParticles", numParticles);

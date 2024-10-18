@@ -217,20 +217,23 @@ void HandleCollisions(uint particleIndex)
             float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
 			// Skip if not within radius
-            if (sqrDstToNeighbour > 0.05f)
+            if (sqrDstToNeighbour > 0.005f)
                 continue;
-            pos *= 0;
-            /*float2 normal = ObstacleNormals[neighbourIndex - numWaterParticles];
-            if (dot(offsetToNeighbour,normal)<=0)
+			
+            float2 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
+            float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
+            float4 transformedNor4 = mul(transformMatrix, particleNor4);
+            float2 normal = float2(transformedNor4.x, transformedNor4.y);
+			
+            float don = dot(offsetToNeighbour, normal);
+            if (don <= 0)
                 continue;
 			else
             {
-                pos += offsetToNeighbour;
-                float offsetva = dot(offsetToNeighbour, normal);
-                if (offsetva<0)
-                    vel = vel - offsetva * normal * (1 + collisionDamping);
-                break;
-            }*/
+                pos = pos + don*normal;
+                float dov = dot(vel, normal);
+                vel = vel - dov * normal * (collisionDamping);
+            }
 
         }
 
@@ -252,7 +255,15 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
 
 	// Predict
 	const float predictionFactor = 1 / 120.0;
-	PredictedPositions[id.x] = Positions[id.x] + Velocities[id.x] * predictionFactor;
+	if(id.x<numWaterParticles)
+		PredictedPositions[id.x] = Positions[id.x] + Velocities[id.x] * predictionFactor;
+    else
+    {
+        float2 particlePos = ObstaclePositions[id.x - numWaterParticles];
+        float4 particlePos4 = float4(particlePos, 0.0f, 1.0f);
+        float4 transformedPos4 = mul(transformMatrix, particlePos4);
+        PredictedPositions[id.x] = transformedPos4.xy;
+    }
 }
 
 [numthreads(NumThreads,1,1)]
@@ -404,19 +415,21 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 	if (id.x >= numParticles) return;
     if (id.x >= numWaterParticles)
     {
-        float2 particlePos = ObstaclePositions[id.x - numWaterParticles];
+        /*float2 particlePos = ObstaclePositions[id.x - numWaterParticles];
         float4 particlePos4 = float4(particlePos, 0.0f, 1.0f);
         float4 transformedPos4 = mul(transformMatrix, particlePos4);
         Positions[id.x] = transformedPos4.xy;
 		
-        /*float2 particleNor = ObstacleNormals[id.x - numWaterParticles];
+        float2 particleNor = ObstacleNormals[id.x - numWaterParticles];
         float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
         float4 transformedNor4 = mul(transformMatrix, particleNor4);
         Velocities[id.x] = float2(10.0f * transformedNor4.x, 0.0f);*/
+		
+        Positions[id.x] = PredictedPositions[id.x];
 
     }
 	
-	GroupMemoryBarrierWithGroupSync();
+	//GroupMemoryBarrierWithGroupSync();
 	
     if (id.x < numWaterParticles)
     {
