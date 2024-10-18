@@ -1,5 +1,7 @@
 using UnityEngine;
 using Unity.Mathematics;
+using static Spawner3D;
+using System;
 
 public class Simulation2D : MonoBehaviour
 {
@@ -27,12 +29,15 @@ public class Simulation2D : MonoBehaviour
     [Header("References")]
     public ComputeShader compute;
     public ParticleSpawner spawner;
+    public SquareParticleSpawner squareSpawner;//MoveObstacle
     public ParticleDisplay2D display;
 
     // Buffers
     public ComputeBuffer positionBuffer { get; private set; }
     public ComputeBuffer velocityBuffer { get; private set; }
     public ComputeBuffer densityBuffer { get; private set; }
+    public ComputeBuffer obstaclePositionBuffer { get; private set; }//MoveObstacle
+    public ComputeBuffer obstacleNormalBuffer { get; private set; }//MoveObstacle
     ComputeBuffer predictedPositionBuffer;
     ComputeBuffer spatialIndices;
     ComputeBuffer spatialOffsets;
@@ -50,8 +55,13 @@ public class Simulation2D : MonoBehaviour
     bool isPaused;
     ParticleSpawner.ParticleSpawnData spawnData;
     bool pauseNextFrame;
+    //MoveObstacle/*
+    SquareParticleSpawner.ParticleSpawnData obstacleSpawnData;
+    float4x4 transformMatrix;//MoveObstacle*/
 
     public int numParticles { get; private set; }
+    public int numObstacleParticles { get; private set; }//MoveObstacle
+    public int numWaterParticles { get; private set; }//MoveObstacle
 
 
     void Start()
@@ -61,7 +71,26 @@ public class Simulation2D : MonoBehaviour
         float deltaTime = 1 / 60f;
         Time.fixedDeltaTime = deltaTime;
 
-        spawnData = spawner.GetSpawnData();
+        //MoveObstacle/*
+        ParticleSpawner.ParticleSpawnData waterSpawnData = spawner.GetSpawnData();
+
+        
+        obstacleSpawnData = squareSpawner.GetSpawnData();
+        spawnData = new ParticleSpawner.ParticleSpawnData(waterSpawnData.positions.Length+obstacleSpawnData.positions.Length);
+        for(int i = 0; i < waterSpawnData.positions.Length; i++)
+        {
+            spawnData.positions[i] = waterSpawnData.positions[i];
+            spawnData.velocities[i]= waterSpawnData.velocities[i];
+        }
+        for (int i = 0; i < obstacleSpawnData.positions.Length; i++)
+        {
+            spawnData.positions[waterSpawnData.positions.Length+i] = obstacleSpawnData.positions[i];
+            spawnData.velocities[waterSpawnData.positions.Length+i] = obstacleSpawnData.velocities[i];
+        }
+
+        numObstacleParticles = obstacleSpawnData.positions.Length;
+        numWaterParticles = waterSpawnData.positions.Length;
+        //MoveObstacle*/
         numParticles = spawnData.positions.Length;
 
         // Create buffers
@@ -71,19 +100,25 @@ public class Simulation2D : MonoBehaviour
         densityBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numParticles);
         spatialIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numParticles);
         spatialOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numParticles);
+        obstaclePositionBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numParticles);//MoveObstacle
+        obstacleNormalBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numObstacleParticles);//MoveObstacle
 
         // Set buffer data
-        SetInitialBufferData(spawnData);
+        SetInitialBufferData(spawnData, obstacleSpawnData);//MoveObstacle
 
         // Init compute
         ComputeHelper.SetBuffer(compute, positionBuffer, "Positions", externalForcesKernel, updatePositionKernel);
-        ComputeHelper.SetBuffer(compute, predictedPositionBuffer, "PredictedPositions", externalForcesKernel, spatialHashKernel, densityKernel, pressureKernel, viscosityKernel);
-        ComputeHelper.SetBuffer(compute, spatialIndices, "SpatialIndices", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel);
-        ComputeHelper.SetBuffer(compute, spatialOffsets, "SpatialOffsets", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel);
+        ComputeHelper.SetBuffer(compute, predictedPositionBuffer, "PredictedPositions", externalForcesKernel, spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, spatialIndices, "SpatialIndices", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);
+        ComputeHelper.SetBuffer(compute, spatialOffsets, "SpatialOffsets", spatialHashKernel, densityKernel, pressureKernel, viscosityKernel, updatePositionKernel);
         ComputeHelper.SetBuffer(compute, densityBuffer, "Densities", densityKernel, pressureKernel, viscosityKernel);
         ComputeHelper.SetBuffer(compute, velocityBuffer, "Velocities", externalForcesKernel, pressureKernel, viscosityKernel, updatePositionKernel);
+        ComputeHelper.SetBuffer(compute, obstaclePositionBuffer, "ObstaclePositions", updatePositionKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, obstacleNormalBuffer, "ObstacleNormals", updatePositionKernel);//MoveObstacle
 
         compute.SetInt("numParticles", numParticles);
+        compute.SetInt("numObstacleParticles", numObstacleParticles);//MoveObstacle
+        compute.SetInt("numWaterParticles", numWaterParticles);//MoveObstacle
 
         gpuSort = new();
         gpuSort.SetBuffers(spatialIndices, spatialOffsets);
@@ -160,6 +195,7 @@ public class Simulation2D : MonoBehaviour
         compute.SetVector("boundsSize", boundsSize);
         compute.SetVector("obstacleSize", obstacleSize);
         compute.SetVector("obstacleCentre", obstacleCentre);
+        compute.SetMatrix("transformMatrix", squareSpawner.GetMatrix4x4());//MoveObstacle
 
         compute.SetFloat("Poly6ScalingFactor", 4 / (Mathf.PI * Mathf.Pow(smoothingRadius, 8)));
         compute.SetFloat("SpikyPow3ScalingFactor", 10 / (Mathf.PI * Mathf.Pow(smoothingRadius, 5)));
@@ -182,7 +218,7 @@ public class Simulation2D : MonoBehaviour
         compute.SetFloat("interactionInputRadius", interactionRadius);
     }
 
-    void SetInitialBufferData(ParticleSpawner.ParticleSpawnData spawnData)
+    void SetInitialBufferData(ParticleSpawner.ParticleSpawnData spawnData,SquareParticleSpawner.ParticleSpawnData obstacleSpawnData)//MoveObstacle
     {
         float2[] allPoints = new float2[spawnData.positions.Length];
         System.Array.Copy(spawnData.positions, allPoints, spawnData.positions.Length);
@@ -190,6 +226,13 @@ public class Simulation2D : MonoBehaviour
         positionBuffer.SetData(allPoints);
         predictedPositionBuffer.SetData(allPoints);
         velocityBuffer.SetData(spawnData.velocities);
+
+        //MoveObstacle/*
+        float2[] allObstaclePoints = new float2[obstacleSpawnData.positions.Length];
+        System.Array.Copy(obstacleSpawnData.positions, allObstaclePoints, obstacleSpawnData.positions.Length);
+
+        obstaclePositionBuffer.SetData(allObstaclePoints);
+        obstacleNormalBuffer.SetData(obstacleSpawnData.normals);//MoveObstacle*/
     }
 
     void HandleInput()
@@ -208,16 +251,16 @@ public class Simulation2D : MonoBehaviour
         {
             isPaused = true;
             // Reset positions, the run single frame to get density etc (for debug purposes) and then reset positions again
-            SetInitialBufferData(spawnData);
+            SetInitialBufferData(spawnData, obstacleSpawnData);
             RunSimulationStep();
-            SetInitialBufferData(spawnData);
+            SetInitialBufferData(spawnData, obstacleSpawnData);
         }
     }
 
 
     void OnDestroy()
     {
-        ComputeHelper.Release(positionBuffer, predictedPositionBuffer, velocityBuffer, densityBuffer, spatialIndices, spatialOffsets);
+        ComputeHelper.Release(positionBuffer, predictedPositionBuffer, velocityBuffer, densityBuffer, spatialIndices, spatialOffsets,obstaclePositionBuffer, obstacleNormalBuffer);//MoveObstacle
     }
 
 
