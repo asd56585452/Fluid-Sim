@@ -4,6 +4,7 @@
 #pragma kernel CalculatePressureForce
 #pragma kernel CalculateViscosity
 #pragma kernel UpdatePositions
+#pragma kernel AddObstacleForces
 
 // Includes
 #include "./FluidMaths2D.hlsl"
@@ -20,6 +21,10 @@ RWStructuredBuffer<uint3> SpatialIndices; // used for spatial hashing
 RWStructuredBuffer<uint> SpatialOffsets; // used for spatial hashing
 RWStructuredBuffer<float2> ObstaclePositions; //MoveObstacle
 RWStructuredBuffer<float2> ObstacleNormals; //MoveObstacle
+RWStructuredBuffer<float2> ObstacleFources; //MoveObstacle
+RWStructuredBuffer<float3> ObstacleTorques; //MoveObstacle
+RWStructuredBuffer<float2> ObstacleFourceResults; //MoveObstacle
+RWStructuredBuffer<float3> ObstacleTorqueResults; //MoveObstacle
 
 // Settings
 const uint numParticles;
@@ -479,3 +484,51 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 	//MoveObstacle*/
 	
 }
+
+//MoveObstacle/*
+[numthreads(NumThreads, 1, 1)] 
+void AddObstacleForces(uint3 id : SV_DispatchThreadID)
+{
+	if(id.x == 0)
+    {
+		ObstacleFourceResults[0] = float2(0, 0);
+		ObstacleTorqueResults[0] = float3(0, 0,0);
+    }
+    ObstacleFources[id.x] = Velocities[numWaterParticles + id.x] / (viscosityStrength * deltaTime*100000);
+    ObstacleTorques[id.x] = cross(float3(ObstaclePositions[id.x].x,ObstaclePositions[id.x].y,0), float3(ObstacleFources[id.x].x, ObstacleFources[id.x].y, 0));
+    GroupMemoryBarrierWithGroupSync();
+    uint index = id.x;
+    uint size = numObstacleParticles; //5
+    uint stride = size / 2; // 初始步长，取数组大小的一半 2
+
+    // 逐步进行归约，每次将有效数据规模减少一半
+    while (stride > 0)
+    {
+        if (index < stride)//0,1
+        {
+            ObstacleFources[index] += ObstacleFources[index + stride]; // 正常归约 0,1 2,3
+            ObstacleTorques[index] += ObstacleTorques[index + stride]; // 正常归约 0,1 2,3
+
+            // 处理剩余的元素
+            if (index + stride * 2 < size)//
+            {
+                ObstacleFources[index] += ObstacleFources[index + stride * 2];
+                ObstacleTorques[index] += ObstacleTorques[index + stride * 2];
+            }
+        }
+
+        // 同步线程组，以确保这一轮的加法完成
+        GroupMemoryBarrierWithGroupSync();
+
+        // 更新步长，继续归约
+        size = (size + 1) / 2; // 处理奇数大小的情况
+        stride = size / 2;
+    }
+	
+    if (id.x == 0)
+    {
+        ObstacleFourceResults[0] = ObstacleFources[0];
+        ObstacleTorqueResults[0] = ObstacleTorques[0];
+    }
+} 
+//MoveObstacle*/

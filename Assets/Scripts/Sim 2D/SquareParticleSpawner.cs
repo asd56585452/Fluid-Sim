@@ -11,6 +11,8 @@ public class SquareParticleSpawner : MonoBehaviour
     public int layerCount = 1; // 粒子层的厚度
     public bool showSpawnBoundsGizmos = true;
 
+    public Rigidbody body;
+
     public ParticleSpawnData GetSpawnData()
     {
         Vector2 spawnCentre = new Vector2(objtransform.position.x, objtransform.position.y);
@@ -104,5 +106,11 @@ public class SquareParticleSpawner : MonoBehaviour
     public Matrix4x4 GetMatrix4x4()
     {
         return Matrix4x4.TRS(new Vector3(objtransform.position.x, objtransform.position.y, 0), objtransform.rotation, Vector3.one);
+    }
+
+    public void AddForce(float2[] force, float3[] torque)
+    {
+        body.AddForce(new Vector3(force[0].x, force[0].y,0));
+        body.AddTorque(new Vector3(torque[0].x, torque[0].y, torque[0].z));
     }
 }
