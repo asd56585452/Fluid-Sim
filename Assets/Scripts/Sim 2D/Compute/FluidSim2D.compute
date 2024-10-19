@@ -151,43 +151,47 @@ float2 ExternalForces(float2 pos, float2 velocity)
 }
 
 
-void HandleCollisions(uint particleIndex)
+void HandleCollisions(uint particleIndex)//MoveObstacle/*
 {
 	float2 pos = Positions[particleIndex];
 	float2 vel = Velocities[particleIndex];
 
-	// Keep particle inside bounds
-	const float2 halfSize = boundsSize * 0.5;
-	float2 edgeDst = halfSize - abs(pos);
+    if (particleIndex < numWaterParticles)
+    {
+		// Keep particle inside bounds
+		const float2 halfSize = boundsSize * 0.5;
+		float2 edgeDst = halfSize - abs(pos);
 
-	if (edgeDst.x <= 0)
-	{
-		pos.x = halfSize.x * sign(pos.x);
-		vel.x *= -1 * collisionDamping;
-	}
-	if (edgeDst.y <= 0)
-	{
-		pos.y = halfSize.y * sign(pos.y);
-		vel.y *= -1 * collisionDamping;
-	}
-
-	// Collide particle against the test obstacle
-	const float2 obstacleHalfSize = obstacleSize * 0.5;
-	float2 obstacleEdgeDst = obstacleHalfSize - abs(pos - obstacleCentre);
-
-	if (obstacleEdgeDst.x >= 0 && obstacleEdgeDst.y >= 0)
-	{
-		if (obstacleEdgeDst.x < obstacleEdgeDst.y) {
-			pos.x = obstacleHalfSize.x * sign(pos.x - obstacleCentre.x) + obstacleCentre.x;
+		if (edgeDst.x <= 0)
+		{
+			pos.x = halfSize.x * sign(pos.x);
 			vel.x *= -1 * collisionDamping;
 		}
-		else {
-			pos.y = obstacleHalfSize.y * sign(pos.y - obstacleCentre.y) + obstacleCentre.y;
+		if (edgeDst.y <= 0)
+		{
+			pos.y = halfSize.y * sign(pos.y);
 			vel.y *= -1 * collisionDamping;
 		}
-	}
+
+		// Collide particle against the test obstacle
+		const float2 obstacleHalfSize = obstacleSize * 0.5;
+		float2 obstacleEdgeDst = obstacleHalfSize - abs(pos - obstacleCentre);
+
+		if (obstacleEdgeDst.x >= 0 && obstacleEdgeDst.y >= 0)
+		{
+			if (obstacleEdgeDst.x < obstacleEdgeDst.y) {
+				pos.x = obstacleHalfSize.x * sign(pos.x - obstacleCentre.x) + obstacleCentre.x;
+				vel.x *= -1 * collisionDamping;
+			}
+			else {
+				pos.y = obstacleHalfSize.y * sign(pos.y - obstacleCentre.y) + obstacleCentre.y;
+				vel.y *= -1 * collisionDamping;
+			}
+		}
+    }
 	
-	//MoveObstacle/*
+	
+	
     int2 originCell = GetCell2D(pos, smoothingRadius);
     float sqrRadius = smoothingRadius * smoothingRadius;
 
@@ -209,42 +213,75 @@ void HandleCollisions(uint particleIndex)
                 continue;
 
             uint neighbourIndex = indexData[0];
-            if (neighbourIndex == particleIndex)
-                continue;
-            if (neighbourIndex < numWaterParticles)
-                continue;
+            if (particleIndex < numWaterParticles)
+            {
+				if (neighbourIndex == particleIndex)
+					continue;
+				if (neighbourIndex < numWaterParticles)
+					continue;
 
-            float2 neighbourPos = Positions[neighbourIndex];
-            float2 offsetToNeighbour = neighbourPos - pos;
-            float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
+				float2 neighbourPos = Positions[neighbourIndex];
+				float2 offsetToNeighbour = neighbourPos - pos;
+				float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
-			// Skip if not within radius
-            if (sqrDstToNeighbour > 0.005f)
-                continue;
+				// Skip if not within radius
+				if (sqrDstToNeighbour > 0.005f)
+					continue;
 			
-            float2 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
-            float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
-            float4 transformedNor4 = mul(transformMatrix, particleNor4);
-            float2 normal = float2(transformedNor4.x, transformedNor4.y);
+				float2 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
+				float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
+				float4 transformedNor4 = mul(transformMatrix, particleNor4);
+				float2 normal = float2(transformedNor4.x, transformedNor4.y);
 			
-            float don = dot(offsetToNeighbour, normal);
-            if (don <= 0)
-                continue;
+				float don = dot(offsetToNeighbour, normal);
+				if (don <= 0)
+					continue;
+				else
+				{
+					pos = pos + don*normal;
+					float dov = dot(vel, normal);
+					if(dov<0)
+						vel = vel - dov * normal * (1 + collisionDamping);
+				}
+            }
 			else
             {
-                pos = pos + don*normal;
-                float dov = dot(vel, normal);
-                vel = vel - dov * normal * (1 + collisionDamping);
+                if (neighbourIndex == particleIndex)
+                    continue;
+                if (neighbourIndex >= numWaterParticles)
+                    continue;
+                float2 neighbourPos = Positions[neighbourIndex];
+                float2 offsetToNeighbour = neighbourPos - pos;
+                float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
+
+				// Skip if not within radius
+                if (sqrDstToNeighbour > 0.005f)
+                    continue;
+                float2 particleNor = ObstacleNormals[particleIndex - numWaterParticles];
+                float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
+                float4 transformedNor4 = mul(transformMatrix, particleNor4);
+                float2 normal = float2(transformedNor4.x, transformedNor4.y);
+				
+                float don = dot(offsetToNeighbour, normal);
+                if (don > 0)
+                    continue;
+                else
+                {
+                    float dov = dot(Velocities[neighbourIndex], normal);
+                    if (dov < 0)
+                        vel = vel + dov * normal * (1 - collisionDamping);
+                }
             }
+            
 
         }
 
     }
-	//MoveObstacle*/
 
 	// Update position and velocity
+    GroupMemoryBarrierWithGroupSync();
 	Positions[particleIndex] = pos;
-	Velocities[particleIndex] = vel;
+    Velocities[particleIndex] = vel; //MoveObstacle*/
 }
 
 [numthreads(NumThreads,1,1)]
@@ -428,16 +465,17 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
         Velocities[id.x] = float2(10.0f * transformedNor4.x, 0.0f);*/
 		
         Positions[id.x] = PredictedPositions[id.x];
+        Velocities[id.x] = float2(0.0f, 0.0f);
 
     }
 	
-	//GroupMemoryBarrierWithGroupSync();
+	GroupMemoryBarrierWithGroupSync();
 	
     if (id.x < numWaterParticles)
     {
 		Positions[id.x] += Velocities[id.x] * deltaTime;
-		HandleCollisions(id.x);
     }
+    HandleCollisions(id.x);
 	//MoveObstacle*/
 	
 }
