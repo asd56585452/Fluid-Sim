@@ -42,6 +42,8 @@ const uint numWaterParticles; //MoveObstacle
 const float2 obstacleSize;
 const float2 obstacleCentre;
 const float4x4 transformMatrix; //MoveObstacle
+const float obstaclefource; //MoveObstacle
+
 
 float DensityKernel(float dst, float radius)
 {
@@ -232,7 +234,7 @@ void HandleCollisions(uint particleIndex)
             {
                 pos = pos + don*normal;
                 float dov = dot(vel, normal);
-                vel = vel - dov * normal * (collisionDamping);
+                vel = vel - dov * normal * (1 + collisionDamping);
             }
 
         }
