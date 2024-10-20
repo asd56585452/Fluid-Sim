@@ -19,12 +19,15 @@ RWStructuredBuffer<float2> Velocities;
 RWStructuredBuffer<float2> Densities; // Density, Near Density
 RWStructuredBuffer<uint3> SpatialIndices; // used for spatial hashing
 RWStructuredBuffer<uint> SpatialOffsets; // used for spatial hashing
-RWStructuredBuffer<float2> ObstaclePositions; //MoveObstacle
-RWStructuredBuffer<float2> ObstacleNormals; //MoveObstacle
+StructuredBuffer<float2> ObstaclePositions; //MoveObstacle
+StructuredBuffer<float2> ObstacleNormals; //MoveObstacle
 RWStructuredBuffer<float2> ObstacleFources; //MoveObstacle
 RWStructuredBuffer<float3> ObstacleTorques; //MoveObstacle
 RWStructuredBuffer<float2> ObstacleFourceResults; //MoveObstacle
 RWStructuredBuffer<float3> ObstacleTorqueResults; //MoveObstacle
+StructuredBuffer<uint> ObstacleIndexs; //MoveObstacle
+StructuredBuffer<float4x4> ObstacleTransformMatrixs; //MoveObstacle
+StructuredBuffer<uint> ObstacleStartPoss; //MoveObstacle
 
 // Settings
 const uint numParticles;
@@ -46,7 +49,7 @@ const uint numWaterParticles; //MoveObstacle
 //obstacle
 const float2 obstacleSize;
 const float2 obstacleCentre;
-const float4x4 transformMatrix; //MoveObstacle
+//const float4x4 transformMatrix; //MoveObstacle
 const float obstaclefource; //MoveObstacle
 
 
@@ -235,6 +238,7 @@ void HandleCollisions(uint particleIndex)//MoveObstacle/*
 			
 				float2 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
 				float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
+                float4x4 transformMatrix = ObstacleTransformMatrixs[ObstacleIndexs[neighbourIndex - numWaterParticles]];
 				float4 transformedNor4 = mul(transformMatrix, particleNor4);
 				float2 normal = float2(transformedNor4.x, transformedNor4.y);
 			
@@ -264,6 +268,7 @@ void HandleCollisions(uint particleIndex)//MoveObstacle/*
                     continue;
                 float2 particleNor = ObstacleNormals[particleIndex - numWaterParticles];
                 float4 particleNor4 = float4(particleNor, 0.0f, 0.0f);
+                float4x4 transformMatrix = ObstacleTransformMatrixs[ObstacleIndexs[particleIndex - numWaterParticles]];
                 float4 transformedNor4 = mul(transformMatrix, particleNor4);
                 float2 normal = float2(transformedNor4.x, transformedNor4.y);
 				
@@ -274,7 +279,7 @@ void HandleCollisions(uint particleIndex)//MoveObstacle/*
                 {
                     float dov = dot(Velocities[neighbourIndex], normal);
                     if (dov < 0)
-                        vel = vel + dov * normal * (1 - collisionDamping);
+                        vel = vel + dov * normal * (2 - collisionDamping);
                 }
             }
             
@@ -305,6 +310,7 @@ void ExternalForces(uint3 id : SV_DispatchThreadID)
     {
         float2 particlePos = ObstaclePositions[id.x - numWaterParticles];
         float4 particlePos4 = float4(particlePos, 0.0f, 1.0f);
+        float4x4 transformMatrix = ObstacleTransformMatrixs[ObstacleIndexs[id.x - numWaterParticles]];
         float4 transformedPos4 = mul(transformMatrix, particlePos4);
         PredictedPositions[id.x] = transformedPos4.xy;
     }
@@ -489,28 +495,32 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 [numthreads(NumThreads, 1, 1)] 
 void AddObstacleForces(uint3 id : SV_DispatchThreadID)
 {
-	if(id.x == 0)
+    uint Oid = ObstacleIndexs[id.x];
+    uint Sp = ObstacleStartPoss[Oid];
+    uint Ep = ObstacleStartPoss[Oid + 1];
+	if(id.x == Sp)
     {
-		ObstacleFourceResults[0] = float2(0, 0);
-		ObstacleTorqueResults[0] = float3(0, 0,0);
+		ObstacleFourceResults[Oid] = float2(0, 0);
+        ObstacleTorqueResults[Oid] = float3(0, 0, 0);
     }
     ObstacleFources[id.x] = Velocities[numWaterParticles + id.x] / (viscosityStrength * deltaTime*100000);
     ObstacleTorques[id.x] = cross(float3(ObstaclePositions[id.x].x,ObstaclePositions[id.x].y,0), float3(ObstacleFources[id.x].x, ObstacleFources[id.x].y, 0));
     GroupMemoryBarrierWithGroupSync();
     uint index = id.x;
-    uint size = numObstacleParticles; //5
+    uint localid = index - Sp;
+    uint size = Ep-Sp; //5
     uint stride = size / 2; // 初始步长，取数组大小的一半 2
 
     // 逐步进行归约，每次将有效数据规模减少一半
-    while (stride > 0)
+    while (stride > 0 )
     {
-        if (index < stride)//0,1
+        if (localid < stride)//0,1
         {
             ObstacleFources[index] += ObstacleFources[index + stride]; // 正常归约 0,1 2,3
             ObstacleTorques[index] += ObstacleTorques[index + stride]; // 正常归约 0,1 2,3
 
             // 处理剩余的元素
-            if (index + stride * 2 < size)//
+            if (localid + stride * 2 < size)//
             {
                 ObstacleFources[index] += ObstacleFources[index + stride * 2];
                 ObstacleTorques[index] += ObstacleTorques[index + stride * 2];
@@ -525,10 +535,10 @@ void AddObstacleForces(uint3 id : SV_DispatchThreadID)
         stride = size / 2;
     }
 	
-    if (id.x == 0)
+    if (id.x == Sp)
     {
-        ObstacleFourceResults[0] = ObstacleFources[0];
-        ObstacleTorqueResults[0] = ObstacleTorques[0];
+        ObstacleFourceResults[Oid] = ObstacleFources[id.x];
+        ObstacleTorqueResults[Oid] = ObstacleTorques[id.x];
     }
 } 
 //MoveObstacle*/

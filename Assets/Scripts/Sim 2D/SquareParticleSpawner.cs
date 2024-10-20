@@ -13,7 +13,7 @@ public class SquareParticleSpawner : MonoBehaviour
 
     public Rigidbody body;
 
-    public ParticleSpawnData GetSpawnData()
+    public ParticleSpawnData GetSpawnData(uint id)
     {
         Vector2 spawnCentre = new Vector2(objtransform.position.x, objtransform.position.y);
         Vector2 spawnSize = new Vector2(objtransform.localScale.x, objtransform.localScale.y);
@@ -68,6 +68,7 @@ public class SquareParticleSpawner : MonoBehaviour
                     data.positions[index] = position;
                     data.velocities[index] = initialVelocity;// + new Vector2(0,10f* ((edge+1) % 2));//bebug
                     data.normals[index] = normal;
+                    data.index[index] = id;
                     index++;
                 }
             }
@@ -83,12 +84,14 @@ public class SquareParticleSpawner : MonoBehaviour
         public float2[] positions;
         public float2[] velocities;
         public float2[] normals;
+        public uint[] index;
 
         public ParticleSpawnData(int num)
         {
             positions = new float2[num];
             velocities = new float2[num];
             normals= new float2[num];
+            index = new uint[num];
         }
     }
 
@@ -108,9 +111,9 @@ public class SquareParticleSpawner : MonoBehaviour
         return Matrix4x4.TRS(new Vector3(objtransform.position.x, objtransform.position.y, 0), objtransform.rotation, Vector3.one);
     }
 
-    public void AddForce(float2[] force, float3[] torque)
+    public void AddForce(float2 force, float3 torque)
     {
-        body.AddForce(new Vector3(force[0].x, force[0].y,0));
-        body.AddTorque(new Vector3(torque[0].x, torque[0].y, torque[0].z));
+        body.AddForce(new Vector3(force.x, force.y,0));
+        body.AddTorque(new Vector3(torque.x, torque.y, torque.z));
     }
 }

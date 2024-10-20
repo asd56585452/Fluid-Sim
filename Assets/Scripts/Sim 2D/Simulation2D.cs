@@ -29,7 +29,7 @@ public class Simulation2D : MonoBehaviour
     [Header("References")]
     public ComputeShader compute;
     public ParticleSpawner spawner;
-    public SquareParticleSpawner squareSpawner;//MoveObstacle
+    public SquareParticleSpawner[] squareSpawner;//MoveObstacle
     public ParticleDisplay2D display;
 
     // Buffers
@@ -42,6 +42,9 @@ public class Simulation2D : MonoBehaviour
     public ComputeBuffer obstacleTorqueBuffer { get; private set; }//MoveObstacle
     public ComputeBuffer obstacleFourceResultBuffer { get; private set; }//MoveObstacle
     public ComputeBuffer obstacleTorqueResultBuffer { get; private set; }//MoveObstacle
+    public ComputeBuffer obstacleIndexBuffer { get; private set; }//MoveObstacle
+    public ComputeBuffer obstacleTransformMatrixBuffer { get; private set; }//MoveObstacle
+    public ComputeBuffer obstacleStartPosBuffer { get; private set; }//MoveObstacle
     ComputeBuffer predictedPositionBuffer;
     ComputeBuffer spatialIndices;
     ComputeBuffer spatialOffsets;
@@ -62,9 +65,9 @@ public class Simulation2D : MonoBehaviour
     bool pauseNextFrame;
     //MoveObstacle/*
     SquareParticleSpawner.ParticleSpawnData obstacleSpawnData;
-    float4x4 transformMatrix;
     public float2[] obstacleFourceResult;
     public float3[] obstacleTorqueResult;
+    public uint[] startpos;
     //MoveObstacle*/
 
     public int numParticles { get; private set; }
@@ -82,10 +85,30 @@ public class Simulation2D : MonoBehaviour
         //MoveObstacle/*
         ParticleSpawner.ParticleSpawnData waterSpawnData = spawner.GetSpawnData();
 
-        
-        obstacleSpawnData = squareSpawner.GetSpawnData();
-        obstacleFourceResult = new float2[1];
-        obstacleTorqueResult = new float3[1];
+        SquareParticleSpawner.ParticleSpawnData[] ts=new SquareParticleSpawner.ParticleSpawnData[squareSpawner.Length];
+        startpos = new uint[squareSpawner.Length+1];
+        int all_l = 0;
+        for (uint i = 0;i < ts.Length;i++)
+        {
+            startpos[i] = ((uint)all_l);
+            ts[i] = squareSpawner[i].GetSpawnData(i);
+            all_l += ts[i].positions.Length;
+        }
+        startpos[squareSpawner.Length] = ((uint)all_l);
+        obstacleSpawnData = new SquareParticleSpawner.ParticleSpawnData(all_l);
+        for (uint i = 0,ii=0;i<all_l;i++)
+        {
+            if (i >= startpos[ii + 1])
+                ii += 1;
+            obstacleSpawnData.positions[i] = ts[ii].positions[i-startpos[ii]];
+            obstacleSpawnData.velocities[i] = ts[ii].velocities[i - startpos[ii]];
+            obstacleSpawnData.normals[i] = ts[ii].normals[i - startpos[ii]];
+            obstacleSpawnData.index[i] = ts[ii].index[i - startpos[ii]];
+        }
+        Debug.Log(startpos[1]);
+
+        obstacleFourceResult = new float2[squareSpawner.Length];
+        obstacleTorqueResult = new float3[squareSpawner.Length];
         spawnData = new ParticleSpawner.ParticleSpawnData(waterSpawnData.positions.Length+obstacleSpawnData.positions.Length);
         for(int i = 0; i < waterSpawnData.positions.Length; i++)
         {
@@ -110,12 +133,15 @@ public class Simulation2D : MonoBehaviour
         densityBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numParticles);
         spatialIndices = ComputeHelper.CreateStructuredBuffer<uint3>(numParticles);
         spatialOffsets = ComputeHelper.CreateStructuredBuffer<uint>(numParticles);
-        obstaclePositionBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numParticles);//MoveObstacle
+        obstaclePositionBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numObstacleParticles);//MoveObstacle
         obstacleNormalBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numObstacleParticles);//MoveObstacle
         obstacleFourceBuffer = ComputeHelper.CreateStructuredBuffer<float2>(numObstacleParticles);//MoveObstacle
         obstacleTorqueBuffer = ComputeHelper.CreateStructuredBuffer<float3>(numObstacleParticles);//MoveObstacle
-        obstacleFourceResultBuffer = ComputeHelper.CreateStructuredBuffer<float2>(1);//MoveObstacle
-        obstacleTorqueResultBuffer = ComputeHelper.CreateStructuredBuffer<float3>(1);//MoveObstacle
+        obstacleFourceResultBuffer = ComputeHelper.CreateStructuredBuffer<float2>(squareSpawner.Length);//MoveObstacle
+        obstacleTorqueResultBuffer = ComputeHelper.CreateStructuredBuffer<float3>(squareSpawner.Length);//MoveObstacle
+        obstacleIndexBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numObstacleParticles);//MoveObstacle
+        obstacleTransformMatrixBuffer = ComputeHelper.CreateStructuredBuffer<float4x4>(squareSpawner.Length);//MoveObstacle
+        obstacleStartPosBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numObstacleParticles);//MoveObstacle
 
         // Set buffer data
         SetInitialBufferData(spawnData, obstacleSpawnData);//MoveObstacle
@@ -133,6 +159,9 @@ public class Simulation2D : MonoBehaviour
         ComputeHelper.SetBuffer(compute, obstacleTorqueBuffer, "ObstacleTorques", addObstacleForcesKernel);//MoveObstacle
         ComputeHelper.SetBuffer(compute, obstacleFourceResultBuffer, "ObstacleFourceResults", addObstacleForcesKernel);//MoveObstacle
         ComputeHelper.SetBuffer(compute, obstacleTorqueResultBuffer, "ObstacleTorqueResults", addObstacleForcesKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, obstacleIndexBuffer, "ObstacleIndexs", externalForcesKernel, updatePositionKernel, addObstacleForcesKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, obstacleTransformMatrixBuffer, "ObstacleTransformMatrixs", externalForcesKernel, updatePositionKernel, addObstacleForcesKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, obstacleStartPosBuffer, "ObstacleStartPoss", externalForcesKernel, updatePositionKernel, addObstacleForcesKernel);//MoveObstacle
 
         compute.SetInt("numParticles", numParticles);
         compute.SetInt("numObstacleParticles", numObstacleParticles);//MoveObstacle
@@ -193,7 +222,8 @@ public class Simulation2D : MonoBehaviour
     {
         obstacleFourceResultBuffer.GetData(obstacleFourceResult);
         obstacleTorqueResultBuffer.GetData(obstacleTorqueResult);
-        squareSpawner.AddForce(obstacleFourceResult, obstacleTorqueResult);
+        for(int i = 0;i<squareSpawner.Length;i++)
+            squareSpawner[i].AddForce(obstacleFourceResult[i], obstacleTorqueResult[i]);
     }
 
     void RunSimulationStep()
@@ -222,7 +252,13 @@ public class Simulation2D : MonoBehaviour
         compute.SetVector("boundsSize", boundsSize);
         compute.SetVector("obstacleSize", obstacleSize);
         compute.SetVector("obstacleCentre", obstacleCentre);
-        compute.SetMatrix("transformMatrix", squareSpawner.GetMatrix4x4());//MoveObstacle
+        //compute.SetMatrix("transformMatrix", squareSpawner[0].GetMatrix4x4());//MoveObstacle
+        Matrix4x4[] matrixs=new Matrix4x4[squareSpawner.Length]; 
+        for (int i = 0; i < squareSpawner.Length; i++)
+        {
+            matrixs[i] = squareSpawner[i].GetMatrix4x4();
+        }
+        obstacleTransformMatrixBuffer.SetData(matrixs);
 
         compute.SetFloat("Poly6ScalingFactor", 4 / (Mathf.PI * Mathf.Pow(smoothingRadius, 8)));
         compute.SetFloat("SpikyPow3ScalingFactor", 10 / (Mathf.PI * Mathf.Pow(smoothingRadius, 5)));
@@ -260,7 +296,9 @@ public class Simulation2D : MonoBehaviour
         System.Array.Copy(obstacleSpawnData.positions, allObstaclePoints, obstacleSpawnData.positions.Length);
 
         obstaclePositionBuffer.SetData(allObstaclePoints);
-        obstacleNormalBuffer.SetData(obstacleSpawnData.normals);//MoveObstacle*/
+        obstacleNormalBuffer.SetData(obstacleSpawnData.normals);
+        obstacleIndexBuffer.SetData(obstacleSpawnData.index);
+        obstacleStartPosBuffer.SetData(startpos);//MoveObstacle*/
     }
 
     void HandleInput()
@@ -288,7 +326,7 @@ public class Simulation2D : MonoBehaviour
 
     void OnDestroy()
     {
-        ComputeHelper.Release(positionBuffer, predictedPositionBuffer, velocityBuffer, densityBuffer, spatialIndices, spatialOffsets,obstaclePositionBuffer, obstacleNormalBuffer, obstacleFourceBuffer,obstacleTorqueBuffer, obstacleFourceResultBuffer, obstacleTorqueResultBuffer);//MoveObstacle
+        ComputeHelper.Release(positionBuffer, predictedPositionBuffer, velocityBuffer, densityBuffer, spatialIndices, spatialOffsets,obstaclePositionBuffer, obstacleNormalBuffer, obstacleFourceBuffer,obstacleTorqueBuffer, obstacleFourceResultBuffer, obstacleTorqueResultBuffer, obstacleIndexBuffer, obstacleTransformMatrixBuffer);//MoveObstacle
     }
 
 
