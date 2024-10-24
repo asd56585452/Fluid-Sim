@@ -38,6 +38,7 @@ public class Simulation3D : MonoBehaviour
     public ComputeBuffer obstacleIndexBuffer { get; private set; }//MoveObstacle
     public ComputeBuffer obstacleTransformMatrixBuffer { get; private set; }//MoveObstacle
     public ComputeBuffer obstacleStartPosBuffer { get; private set; }//MoveObstacle
+    public ComputeBuffer nearestObstacleLockBuffer { get; private set; }//MoveObstacle
     public ComputeBuffer predictedPositionsBuffer;
     ComputeBuffer spatialIndices;
     ComputeBuffer spatialOffsets;
@@ -137,6 +138,7 @@ public class Simulation3D : MonoBehaviour
         obstacleIndexBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numObstacleParticles);//MoveObstacle
         obstacleTransformMatrixBuffer = ComputeHelper.CreateStructuredBuffer<float4x4>(pcdSpawner.Length);//MoveObstacle
         obstacleStartPosBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numObstacleParticles);//MoveObstacle
+        nearestObstacleLockBuffer = ComputeHelper.CreateStructuredBuffer<uint>(numParticles);//MoveObstacle
 
         // Set buffer data
         SetInitialBufferData(spawnData, obstacleSpawnData);//MoveObstacle
@@ -163,6 +165,7 @@ public class Simulation3D : MonoBehaviour
         ComputeHelper.SetBuffer(compute, obstacleIndexBuffer, "ObstacleIndexs", externalForcesKernel, updatePositionsKernel, addObstacleForcesKernel);//MoveObstacle
         ComputeHelper.SetBuffer(compute, obstacleTransformMatrixBuffer, "ObstacleTransformMatrixs", externalForcesKernel, updatePositionsKernel, addObstacleForcesKernel);//MoveObstacle
         ComputeHelper.SetBuffer(compute, obstacleStartPosBuffer, "ObstacleStartPoss", externalForcesKernel, updatePositionsKernel, addObstacleForcesKernel);//MoveObstacle
+        ComputeHelper.SetBuffer(compute, nearestObstacleLockBuffer, "NearestObstacleLock", updatePositionsKernel);//MoveObstacle
 
         compute.SetInt("numParticles", positionBuffer.count);
         compute.SetInt("numObstacleParticles", numObstacleParticles);//MoveObstacle
@@ -311,7 +314,7 @@ public class Simulation3D : MonoBehaviour
 
     void OnDestroy()
     {
-        ComputeHelper.Release(positionBuffer, predictedPositionsBuffer, velocityBuffer, densityBuffer, spatialIndices, spatialOffsets, obstaclePositionBuffer, obstacleNormalBuffer, obstacleFourceBuffer, obstacleTorqueBuffer, obstacleFourceResultBuffer, obstacleTorqueResultBuffer, obstacleIndexBuffer, obstacleTransformMatrixBuffer);//MoveObstacle
+        ComputeHelper.Release(positionBuffer, predictedPositionsBuffer, velocityBuffer, densityBuffer, spatialIndices, spatialOffsets, obstaclePositionBuffer, obstacleNormalBuffer, obstacleFourceBuffer, obstacleTorqueBuffer, obstacleFourceResultBuffer, obstacleTorqueResultBuffer, obstacleIndexBuffer, obstacleTransformMatrixBuffer, nearestObstacleLockBuffer);//MoveObstacle
     }
 
     void OnDrawGizmos()

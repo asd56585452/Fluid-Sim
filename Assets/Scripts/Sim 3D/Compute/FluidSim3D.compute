@@ -28,6 +28,7 @@ RWStructuredBuffer<float3> ObstacleTorqueResults; //MoveObstacle
 StructuredBuffer<uint> ObstacleIndexs; //MoveObstacle
 StructuredBuffer<float4x4> ObstacleTransformMatrixs; //MoveObstacle
 StructuredBuffer<uint> ObstacleStartPoss; //MoveObstacle
+RWStructuredBuffer<uint> NearestObstacleLock; //MoveObstacle
 
 // Settings
 const uint numParticles;
@@ -103,6 +104,8 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
     float3 pos = Positions[particleIndex];
     float3 vel = Velocities[particleIndex];
 	
+    float nearestObstacleDistance = 1.0f;
+	
     int3 originCell = GetCell3D(pos, smoothingRadius);
     float sqrRadius = smoothingRadius * smoothingRadius;
 
@@ -136,7 +139,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
                 float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
 				// Skip if not within radius
-                if (sqrDstToNeighbour > 0.045f)
+                if (sqrDstToNeighbour > 0.045f || sqrDstToNeighbour>nearestObstacleDistance)
                     continue;
 			
                 float3 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
@@ -151,16 +154,43 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
                 else
                 {
                     pos = pos + don * normal;
-                    float dov = dot(vel, normal);
+                    float dov = dot(Velocities[particleIndex], normal);
                     if (dov < 0)
-                        vel = vel - dov * normal * (1 + collisionDamping);
+                        vel = Velocities[particleIndex] - dov * normal * (1 + collisionDamping);
+                    nearestObstacleDistance = sqrDstToNeighbour;
+                    NearestObstacleLock[particleIndex] = neighbourIndex;
+
                 }
             }
-            else
+        }
+
+    }
+    GroupMemoryBarrierWithGroupSync();
+    for (int i = 0; i < 27; i++)
+    {
+        uint hash = HashCell3D(originCell + offsets3D[i]);
+        uint key = KeyFromHash(hash, numParticles);
+        uint currIndex = SpatialOffsets[key];
+
+        while (currIndex < numParticles)
+        {
+            uint3 indexData = SpatialIndices[currIndex];
+            currIndex++;
+			// Exit if no longer looking at correct bin
+            if (indexData[2] != key)
+                break;
+			// Skip if hash does not match
+            if (indexData[1] != hash)
+                continue;
+
+            uint neighbourIndex = indexData[0];
+            if (particleIndex >= numWaterParticles)
             {
                 if (neighbourIndex == particleIndex)
                     continue;
                 if (neighbourIndex >= numWaterParticles)
+                    continue;
+                if (NearestObstacleLock[neighbourIndex] != particleIndex)
                     continue;
                 float3 neighbourPos = Positions[neighbourIndex];
                 float3 offsetToNeighbour = neighbourPos - pos;
@@ -190,7 +220,6 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
         }
 
     }
-
 	// Update position and velocity
     GroupMemoryBarrierWithGroupSync();
     Positions[particleIndex] = pos;
