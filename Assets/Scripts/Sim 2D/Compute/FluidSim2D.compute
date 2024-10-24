@@ -49,8 +49,6 @@ const uint numWaterParticles; //MoveObstacle
 //obstacle
 const float2 obstacleSize;
 const float2 obstacleCentre;
-//const float4x4 transformMatrix; //MoveObstacle
-const float obstaclefource; //MoveObstacle
 
 
 float DensityKernel(float dst, float radius)

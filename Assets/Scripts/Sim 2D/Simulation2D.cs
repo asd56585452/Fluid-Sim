@@ -57,7 +57,7 @@ public class Simulation2D : MonoBehaviour
     const int pressureKernel = 3;
     const int viscosityKernel = 4;
     const int updatePositionKernel = 5;
-    const int addObstacleForcesKernel = 6;
+    const int addObstacleForcesKernel = 6;//MoveObstacle
 
     // State
     bool isPaused;
@@ -213,18 +213,18 @@ public class Simulation2D : MonoBehaviour
             {
                 RunSimulationStep();
                 SimulationStepCompleted?.Invoke();
-                GetOutput();
+                GetOutput();//MoveObstacle
             }
         }
     }
 
-    void GetOutput()
+    void GetOutput()//MoveObstacle/*
     {
         obstacleFourceResultBuffer.GetData(obstacleFourceResult);
         obstacleTorqueResultBuffer.GetData(obstacleTorqueResult);
         for(int i = 0;i<squareSpawner.Length;i++)
             squareSpawner[i].AddForce(obstacleFourceResult[i], obstacleTorqueResult[i]);
-    }
+    }//MoveObstacle*/
 
     void RunSimulationStep()
     {
@@ -235,7 +235,7 @@ public class Simulation2D : MonoBehaviour
         ComputeHelper.Dispatch(compute, numParticles, kernelIndex: pressureKernel);
         ComputeHelper.Dispatch(compute, numParticles, kernelIndex: viscosityKernel);
         ComputeHelper.Dispatch(compute, numParticles, kernelIndex: updatePositionKernel); 
-        ComputeHelper.Dispatch(compute, numObstacleParticles, kernelIndex: addObstacleForcesKernel);
+        ComputeHelper.Dispatch(compute, numObstacleParticles, kernelIndex: addObstacleForcesKernel);//MoveObstacle
 
     }
 
@@ -252,13 +252,14 @@ public class Simulation2D : MonoBehaviour
         compute.SetVector("boundsSize", boundsSize);
         compute.SetVector("obstacleSize", obstacleSize);
         compute.SetVector("obstacleCentre", obstacleCentre);
-        //compute.SetMatrix("transformMatrix", squareSpawner[0].GetMatrix4x4());//MoveObstacle
+        //compute.SetMatrix("transformMatrix", squareSpawner[0].GetMatrix4x4());
+        //MoveObstacle/*
         Matrix4x4[] matrixs=new Matrix4x4[squareSpawner.Length]; 
         for (int i = 0; i < squareSpawner.Length; i++)
         {
             matrixs[i] = squareSpawner[i].GetMatrix4x4();
         }
-        obstacleTransformMatrixBuffer.SetData(matrixs);
+        obstacleTransformMatrixBuffer.SetData(matrixs);//MoveObstacle*/
 
         compute.SetFloat("Poly6ScalingFactor", 4 / (Mathf.PI * Mathf.Pow(smoothingRadius, 8)));
         compute.SetFloat("SpikyPow3ScalingFactor", 10 / (Mathf.PI * Mathf.Pow(smoothingRadius, 5)));
