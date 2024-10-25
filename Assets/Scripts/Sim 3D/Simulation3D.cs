@@ -22,6 +22,7 @@ public class Simulation3D : MonoBehaviour
     public ComputeShader compute;
     public Spawner3D spawner;
     public PcdParticleSpawner[] pcdSpawner;//MoveObstacle
+    public CpuParticleSystemSpawner cpuParticleSystemSpawner;//WaterInOutput
     public ParticleDisplay3D display;
     public Transform floorDisplay;
 
@@ -67,6 +68,7 @@ public class Simulation3D : MonoBehaviour
 
     public int numObstacleParticles { get; private set; }//MoveObstacle
     public int numWaterParticles { get; private set; }//MoveObstacle
+    public int numWaterParticlesMask;//WaterInOutput
 
     void Start()
     {
@@ -170,6 +172,7 @@ public class Simulation3D : MonoBehaviour
         compute.SetInt("numParticles", positionBuffer.count);
         compute.SetInt("numObstacleParticles", numObstacleParticles);//MoveObstacle
         compute.SetInt("numWaterParticles", numWaterParticles);//MoveObstacle
+        compute.SetInt("numWaterParticlesMask", numWaterParticlesMask);//WaterInOutput
 
         gpuSort = new();
         gpuSort.SetBuffers(spatialIndices, spatialOffsets);
@@ -211,6 +214,7 @@ public class Simulation3D : MonoBehaviour
     {
         if (!isPaused)
         {
+            WaterInOutput();//WaterInOutput
             float timeStep = frameTime / iterationsPerFrame * timeScale;
 
             UpdateSettings(timeStep);
@@ -223,7 +227,22 @@ public class Simulation3D : MonoBehaviour
             }
         }
     }
+    void WaterInOutput()//MoveObstacle/*
+    {
+        int copylength = math.min(cpuParticleSystemSpawner.numParticlesAlive, numWaterParticles - numWaterParticlesMask);
+        float3[] allPoints = new float3[copylength];
+        float3[] allvelocities = new float3[copylength];
+        for (int i = 0;i< copylength; i++)
+        {
+            allPoints[i] = cpuParticleSystemSpawner.particles[i].position;
+            allvelocities[i] = cpuParticleSystemSpawner.particles[i].velocity;
+        }
+        positionBuffer.SetData(allPoints,0, numWaterParticlesMask, copylength);
+        predictedPositionsBuffer.SetData(allPoints, 0, numWaterParticlesMask, copylength);
+        velocityBuffer.SetData(allvelocities, 0, numWaterParticlesMask, copylength);
+        numWaterParticlesMask += copylength;
 
+    }//MoveObstacle*/
     void GetOutput()//MoveObstacle/*
     {
         obstacleFourceResultBuffer.GetData(obstacleFourceResult);
@@ -263,6 +282,13 @@ public class Simulation3D : MonoBehaviour
 
         compute.SetMatrix("localToWorld", transform.localToWorldMatrix);
         compute.SetMatrix("worldToLocal", transform.worldToLocalMatrix);
+
+        //WaterInOutput/*
+        if (numWaterParticlesMask > numWaterParticles)
+            numWaterParticlesMask = numWaterParticles;
+        if (numWaterParticlesMask < 0)
+            numWaterParticlesMask = 0;
+        compute.SetInt("numWaterParticlesMask", numWaterParticlesMask);//WaterInOutput*/
 
         //MoveObstacle/*
         Matrix4x4[] matrixs = new Matrix4x4[pcdSpawner.Length];

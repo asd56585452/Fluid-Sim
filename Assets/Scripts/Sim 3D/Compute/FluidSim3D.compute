@@ -54,6 +54,7 @@ const float interactionInputRadius;
 
 const uint numObstacleParticles; //MoveObstacle
 const uint numWaterParticles; //MoveObstacle
+const uint numWaterParticlesMask; //WaterInOutput
 
 float PressureFromDensity(float density)
 {
@@ -71,7 +72,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
 	float3 posLocal = mul(worldToLocal, float4(Positions[particleIndex], 1)).xyz;
 	float3 velocityLocal = mul(worldToLocal, float4(Velocities[particleIndex], 0)).xyz;
 
-    if (particleIndex < numWaterParticles)
+    if (particleIndex < numWaterParticlesMask)//WaterInOutput
     {
 		// Calculate distance from box on each axis (negative values are inside box)
 		const float3 halfSize = 0.5;
@@ -127,7 +128,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
                 continue;
 
             uint neighbourIndex = indexData[0];
-            if (particleIndex < numWaterParticles)
+            if (particleIndex < numWaterParticlesMask)//WaterInOutput
             {
                 if (neighbourIndex == particleIndex)
                     continue;
@@ -139,7 +140,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
                 float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
 				// Skip if not within radius
-                if (sqrDstToNeighbour > 0.045f || sqrDstToNeighbour>nearestObstacleDistance)
+                if (sqrDstToNeighbour > 0.005f || sqrDstToNeighbour>nearestObstacleDistance)
                     continue;
 			
                 float3 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
@@ -188,7 +189,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
             {
                 if (neighbourIndex == particleIndex)
                     continue;
-                if (neighbourIndex >= numWaterParticles)
+                if (neighbourIndex >= numWaterParticlesMask)//WaterInOutput
                     continue;
                 if (NearestObstacleLock[neighbourIndex] != particleIndex)
                     continue;
@@ -197,7 +198,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
                 float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
 				// Skip if not within radius
-                if (sqrDstToNeighbour > 0.045f)
+                if (sqrDstToNeighbour > 0.005f)
                     continue;
                 float3 particleNor = ObstacleNormals[particleIndex - numWaterParticles];
                 float4 particleNor4 = float4(particleNor, 0.0f);
@@ -232,13 +233,14 @@ void ExternalForces (uint3 id : SV_DispatchThreadID)
 {
 	if (id.x >= numParticles) return;
 
-	// External forces (gravity)
-	Velocities[id.x] += float3(0, gravity, 0) * deltaTime;
-
 	// Predict MoveObstacle/*
-    if (id.x < numWaterParticles)
+    if (id.x < numWaterParticlesMask)//WaterInOutput
+    {
+		// External forces (gravity)
+        Velocities[id.x] += float3(0, gravity, 0) * deltaTime;
 		PredictedPositions[id.x] = Positions[id.x] + Velocities[id.x] * 1 / 120.0;
-	else
+    }
+	else if(id.x >= numWaterParticles)
     {
         float3 particlePos = ObstaclePositions[id.x - numWaterParticles];
         float4 particlePos4 = float4(particlePos, 1.0f);
@@ -266,7 +268,8 @@ void UpdateSpatialHash (uint3 id : SV_DispatchThreadID)
 [numthreads(NumThreads,1,1)]
 void CalculateDensities (uint3 id : SV_DispatchThreadID)
 {
-	if (id.x >= numParticles) return;
+    if (id.x >= numWaterParticlesMask)//WaterInOutput
+        return;
 
 	float3 pos = PredictedPositions[id.x];
 	int3 originCell = GetCell3D(pos, smoothingRadius);
@@ -293,7 +296,7 @@ void CalculateDensities (uint3 id : SV_DispatchThreadID)
 			uint neighbourIndex = indexData[0];
 			
 			// Skip MoveObstacle
-            if (neighbourIndex >= numWaterParticles)
+            if (neighbourIndex >= numWaterParticlesMask)//MoveObstacle//WaterInOutput
                 continue; //MoveObstacle
 			
 			float3 neighbourPos = PredictedPositions[neighbourIndex];
@@ -316,7 +319,8 @@ void CalculateDensities (uint3 id : SV_DispatchThreadID)
 [numthreads(NumThreads,1,1)]
 void CalculatePressureForce (uint3 id : SV_DispatchThreadID)
 {
-	if (id.x >= numParticles) return;
+    if (id.x >= numWaterParticlesMask)//WaterInOutput
+        return;
 
 	// Calculate pressure
 	float density = Densities[id.x][0];
@@ -350,7 +354,7 @@ void CalculatePressureForce (uint3 id : SV_DispatchThreadID)
 			if (neighbourIndex == id.x) continue;
 			
 			// Skip MoveObstacle
-            if (neighbourIndex >= numWaterParticles)
+            if (neighbourIndex >= numWaterParticlesMask)//WaterInOutput
                 continue; //MoveObstacle
 
 			float3 neighbourPos = PredictedPositions[neighbourIndex];
@@ -385,7 +389,8 @@ void CalculatePressureForce (uint3 id : SV_DispatchThreadID)
 [numthreads(NumThreads,1,1)]
 void CalculateViscosity (uint3 id : SV_DispatchThreadID)
 {
-	if (id.x >= numParticles) return;
+    if (id.x >= numWaterParticlesMask)//WaterInOutput
+        return;
 		
 	float3 pos = PredictedPositions[id.x];
 	int3 originCell = GetCell3D(pos, smoothingRadius);
@@ -415,7 +420,7 @@ void CalculateViscosity (uint3 id : SV_DispatchThreadID)
 			if (neighbourIndex == id.x) continue;
 			
 			// Skip MoveObstacle
-            if (neighbourIndex >= numWaterParticles)
+            if (neighbourIndex >= numWaterParticlesMask)//WaterInOutput
                 continue; //MoveObstacle
 
 			float3 neighbourPos = PredictedPositions[neighbourIndex];
@@ -446,7 +451,7 @@ void UpdatePositions(uint3 id : SV_DispatchThreadID)
 	
     GroupMemoryBarrierWithGroupSync();
 
-    if (id.x < numWaterParticles)
+    if (id.x < numWaterParticlesMask)//WaterInOutput
     {
 		Positions[id.x] += Velocities[id.x] * deltaTime;
     }
