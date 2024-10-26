@@ -25,7 +25,6 @@ public class CpuParticleSystemSpawner : MonoBehaviour
     void Update()
     {
         numParticlesAlive = particleSystem.GetParticles(particles);
-        Debug.Log(particles[0].position);
         var mainModule = particleSystem.main;
         mainModule.startLifetime = Time.deltaTime; // 设置粒子生命周期为 deltaTime
     }
