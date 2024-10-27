@@ -144,7 +144,7 @@ void ResolveCollisions(uint particleIndex)//MoveObstacle/*
                 float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
 		// Skip if not within radius
-                if (sqrDstToNeighbour > 0.005f || sqrDstToNeighbour > nearestObstacleDistance)
+                if (sqrDstToNeighbour > 0.01f || sqrDstToNeighbour > nearestObstacleDistance)
                     continue;
 			
                 float3 particleNor = ObstacleNormals[neighbourIndex - numWaterParticles];
@@ -514,7 +514,7 @@ void CalculateObstacleForces(uint3 id : SV_DispatchThreadID)
             float sqrDstToNeighbour = dot(offsetToNeighbour, offsetToNeighbour);
 
 			// Skip if not within radius
-            if (sqrDstToNeighbour > 0.005f)
+            if (sqrDstToNeighbour > 0.01f)
                 continue;
                 
 				

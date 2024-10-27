@@ -65,17 +65,17 @@ public class Simulation3D : MonoBehaviour
     bool pauseNextFrame;
     //MoveObstacle/*
     PcdParticleSpawner.ParticleSpawnData obstacleSpawnData;
-    public float3[] obstacleFourceResult;
-    public float3[] obstacleTorqueResult;
+    private float3[] obstacleFourceResult;
+    private float3[] obstacleTorqueResult;
     //public float3[] velocityBufferResult;
     //public float3[] ObstacleFourcesResult;
-    public uint[] startpos;
+    private uint[] startpos;
     //MoveObstacle*/
     Spawner3D.SpawnData spawnData;
 
     public int numObstacleParticles { get; private set; }//MoveObstacle
     public int numWaterParticles { get; private set; }//MoveObstacle
-    public int numWaterParticlesMask;//WaterInOutput
+    public int numWaterParticlesMask{ get; private set; }//WaterInOutput
     private int numWaterParticlesSpawnerStartpos=0;//WaterInOutput
 
     void Start()
@@ -186,6 +186,7 @@ public class Simulation3D : MonoBehaviour
         compute.SetInt("numParticles", positionBuffer.count);
         compute.SetInt("numObstacleParticles", numObstacleParticles);//MoveObstacle
         compute.SetInt("numWaterParticles", numWaterParticles);//MoveObstacle
+        numWaterParticlesMask = 0;
         compute.SetInt("numWaterParticlesMask", numWaterParticlesMask);//WaterInOutput
 
         gpuSort = new();

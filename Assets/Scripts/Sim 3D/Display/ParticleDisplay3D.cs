@@ -21,6 +21,9 @@ public class ParticleDisplay3D : MonoBehaviour
     public int meshResolution;
     public int debug_MeshTriCount;
 
+    private int mask=int.MaxValue;
+    private Simulation3D simulation3D;
+
     public void Init(Simulation3D sim)
     {
         mat = new Material(shader);
@@ -31,6 +34,7 @@ public class ParticleDisplay3D : MonoBehaviour
         debug_MeshTriCount = mesh.triangles.Length / 3;
         argsBuffer = ComputeHelper.CreateArgsBuffer(mesh, sim.positionBuffer.count);
         bounds = new Bounds(Vector3.zero, Vector3.one * 10000);
+        simulation3D = sim;
     }
 
     void LateUpdate()
@@ -51,6 +55,11 @@ public class ParticleDisplay3D : MonoBehaviour
         mat.SetFloat("scale", scale);
         mat.SetColor("colour", col);
         mat.SetFloat("velocityMax", velocityDisplayMax);
+        if(simulation3D != null)
+        {
+            mask = simulation3D.numWaterParticlesMask;
+        }
+        mat.SetInt("mask", mask);
 
         Vector3 s = transform.localScale;
         transform.localScale = Vector3.one;

@@ -120,7 +120,11 @@ public class PcdParticleSpawner : MonoBehaviour
 
     public void AddForce(float3 force, float3 torque)
     {
-        body.AddForce(new Vector3(force.x, force.y, force.z));
-        body.AddTorque(new Vector3(torque.x, torque.y, torque.z));
+        if(body != null)
+        {
+            body.AddForce(new Vector3(force.x, force.y, force.z));
+            body.AddTorque(new Vector3(torque.x, torque.y, torque.z));
+        }
+        
     }
 }

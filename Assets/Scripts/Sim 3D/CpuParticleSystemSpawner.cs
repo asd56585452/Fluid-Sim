@@ -18,6 +18,8 @@ public class CpuParticleSystemSpawner : MonoBehaviour
         var mainModule = particleSystem.main;
         mainModule.startLifetime = Time.deltaTime; // 设置粒子生命周期为 deltaTime
         mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
+        var renderer = particleSystem.GetComponent<ParticleSystemRenderer>();
+        renderer.enabled = false;
 
         particles = new ParticleSystem.Particle[particleSystem.main.maxParticles];
     }
