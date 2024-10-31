@@ -23,6 +23,7 @@ public class ParticleDisplay3D : MonoBehaviour
 
     private int mask=int.MaxValue;
     private Simulation3D simulation3D;
+    public bool DebugMode;
 
     public void Init(Simulation3D sim)
     {
@@ -55,9 +56,13 @@ public class ParticleDisplay3D : MonoBehaviour
         mat.SetFloat("scale", scale);
         mat.SetColor("colour", col);
         mat.SetFloat("velocityMax", velocityDisplayMax);
-        if(simulation3D != null)
+        if(simulation3D != null && !DebugMode)
         {
             mask = simulation3D.numWaterParticlesMask;
+        }
+        else
+        {
+            mask = int.MaxValue;
         }
         mat.SetInt("mask", mask);
 

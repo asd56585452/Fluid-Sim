@@ -21,12 +21,15 @@ public class PcdParticleSpawner : MonoBehaviour
             List<Vector3> positions = new List<Vector3>();
             List<Vector3> normals = new List<Vector3>();
 
+
             LoadPLYFile(filePath, out positions, out normals);
             data = new ParticleSpawnData(positions.Count);
             for (int i = 0; i < positions.Count; i++)
             {
-                data.positions[i] = positions[i];
-                data.normals[i] = normals[i];
+                Vector3 convertedPosition = new Vector3(-positions[i].x, positions[i].z, -positions[i].y);
+                Vector3 convertedNormal = new Vector3(-normals[i].x, normals[i].z, -normals[i].y);
+                data.positions[i] = convertedPosition;
+                data.normals[i] = convertedNormal;
                 data.index[i] = id;
                 data.velocities[i] = initialVelocity;
             }
@@ -115,7 +118,7 @@ public class PcdParticleSpawner : MonoBehaviour
 
     public Matrix4x4 GetMatrix4x4()
     {
-        return Matrix4x4.TRS(objtransform.position, objtransform.rotation, Vector3.one);
+        return Matrix4x4.TRS(objtransform.position, objtransform.rotation, objtransform.localScale);
     }
 
     public void AddForce(float3 force, float3 torque)
