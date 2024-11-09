@@ -271,7 +271,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   timeScale: 0.9
-  fixedTimeStep: 0
+  fixedTimeStep: 1
   iterationsPerFrame: 3
   gravity: -10
   collisionDamping: 0.534
@@ -498,6 +498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8ec6be322e3a8748b12b4215845cbf1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  particleTransform: {fileID: 0}
   particleSystem: {fileID: 0}
   numParticlesAlive: 0
 --- !u!199 &694142020
@@ -5375,6 +5376,10 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 13400000, guid: eb159e2b8cc5c3e48bc7562c9f9ad3ce, type: 2}
+    - target: {fileID: 6432062696452213077, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
+      propertyPath: pcdFilePath
+      value: Assets/StreamingAssets/Python/cube_pcd.ply
+      objectReference: {fileID: 0}
     - target: {fileID: 7167706033512505797, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
       propertyPath: m_Name
       value: Cube (1)
@@ -5574,8 +5579,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.3060337, y: -0.36899146, z: 0.13011216, w: 0.8679052}
-  m_LocalPosition: {x: 10.202188, y: 6.3708477, z: -3.288065}
+  m_LocalRotation: {x: 0.3358371, y: 0.31333932, z: -0.11955285, w: 0.88019264}
+  m_LocalPosition: {x: -0.9474664, y: 4.973999, z: -4.016739}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5649,6 +5654,10 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 13400000, guid: c996dbd159298df4182a7ee2cd0347ce, type: 2}
+    - target: {fileID: 6432062696452213077, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
+      propertyPath: pcdFilePath
+      value: Assets/StreamingAssets/Python/cube_pcd.ply
+      objectReference: {fileID: 0}
     - target: {fileID: 7167706033512505797, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
       propertyPath: m_Name
       value: Cube (4)
@@ -5677,7 +5686,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   initialVelocity: {x: 0, y: 0, z: 0}
   objtransform: {fileID: 1402047512}
-  pcdFilePath: Assets/Scripts/Python/landscape_pcd.ply
+  pcdFilePath: Assets/StreamingAssets/Python/landscape_pcd.ply
   body: {fileID: 0}
 --- !u!4 &1402047512 stripped
 Transform:
@@ -6062,6 +6071,10 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 13400000, guid: eb159e2b8cc5c3e48bc7562c9f9ad3ce, type: 2}
+    - target: {fileID: 6432062696452213077, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
+      propertyPath: pcdFilePath
+      value: Assets/StreamingAssets/Python/cube_pcd.ply
+      objectReference: {fileID: 0}
     - target: {fileID: 7167706033512505797, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
       propertyPath: m_Name
       value: Cube (2)
@@ -6319,6 +6332,10 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 13400000, guid: eb159e2b8cc5c3e48bc7562c9f9ad3ce, type: 2}
+    - target: {fileID: 6432062696452213077, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
+      propertyPath: pcdFilePath
+      value: Assets/StreamingAssets/Python/cube_pcd.ply
+      objectReference: {fileID: 0}
     - target: {fileID: 7167706033512505797, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
       propertyPath: m_Name
       value: Cube (3)
@@ -6534,6 +6551,10 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 13400000, guid: eb159e2b8cc5c3e48bc7562c9f9ad3ce, type: 2}
+    - target: {fileID: 6432062696452213077, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
+      propertyPath: pcdFilePath
+      value: Assets/StreamingAssets/Python/cube_pcd.ply
+      objectReference: {fileID: 0}
     - target: {fileID: 7167706033512505797, guid: 2c2fbcd9d57bb894f98f7aa9bc27bc48, type: 3}
       propertyPath: m_Name
       value: Cube

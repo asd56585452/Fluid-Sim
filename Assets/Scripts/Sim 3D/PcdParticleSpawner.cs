@@ -15,7 +15,7 @@ public class PcdParticleSpawner : MonoBehaviour
     public ParticleSpawnData GetSpawnData(uint id)
     {
         ParticleSpawnData data = new ParticleSpawnData(1);
-        string filePath = Path.Combine(Application.dataPath, pcdFilePath.Replace("Assets/", ""));
+        string filePath = Path.Combine(Application.streamingAssetsPath, pcdFilePath.Replace("Assets/StreamingAssets/", ""));
         if (File.Exists(filePath))
         {
             List<Vector3> positions = new List<Vector3>();

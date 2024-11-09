@@ -48,7 +48,8 @@ Shader "Instanced/Particle3DSurf" {
 				float speed = length(Velocities[unity_InstanceID]);
 				float speedT = saturate(speed / velocityMax);
 				float colT = speedT;
-				o.colour = tex2Dlod(ColourMap, float4(colT, 0.5,0,0));
+				o.colour = float4(colT,1.0,1.0,1.0);
+				//o.colour = tex2Dlod(ColourMap, float4(colT, 0.5,0,0));//Can not in build work
 	#endif
 			}
 

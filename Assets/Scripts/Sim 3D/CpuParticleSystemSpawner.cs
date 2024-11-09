@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class CpuParticleSystemSpawner : MonoBehaviour
 {
+    public Transform particleTransform;
     public ParticleSystem particleSystem;
     public ParticleSystem.Particle[] particles;
     public int numParticlesAlive = 0;
@@ -19,7 +20,7 @@ public class CpuParticleSystemSpawner : MonoBehaviour
         mainModule.startLifetime = Time.deltaTime; // 设置粒子生命周期为 deltaTime
         mainModule.simulationSpace = ParticleSystemSimulationSpace.World;
         var renderer = particleSystem.GetComponent<ParticleSystemRenderer>();
-        renderer.enabled = false;
+        //renderer.enabled = false;
 
         particles = new ParticleSystem.Particle[particleSystem.main.maxParticles];
     }
