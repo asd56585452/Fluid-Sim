@@ -2,7 +2,9 @@ import open3d as o3d
 import numpy as np
 
 # 加載 Mesh
-name = 'cube'
+# name = 'landscape'#20000
+# name = 'cube'#250
+name = '12219_boat_v2_L2'
 mesh = o3d.io.read_triangle_mesh(name+".ply")
 
 print(mesh)

@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Mathematics;
 using static Spawner3D;
+using System.Collections.Generic;
 
 public class Simulation3D : MonoBehaviour
 {
@@ -22,6 +23,7 @@ public class Simulation3D : MonoBehaviour
     public ComputeShader compute;
     public Spawner3D spawner;
     public PcdParticleSpawner[] pcdSpawner;//MoveObstacle
+    public GameObject cubeList;//MoveObstacle
     public CpuParticleSystemSpawner cpuParticleSystemSpawner;//WaterInOutput
     public float ParticleLifeTime;//WaterInOutput
     private float ParticleLifeTimeTimer=0;//WaterInOutput
@@ -77,6 +79,7 @@ public class Simulation3D : MonoBehaviour
     public int numWaterParticles { get; private set; }//MoveObstacle
     public int numWaterParticlesMask{ get; private set; }//WaterInOutput
     private int numWaterParticlesSpawnerStartpos=0;//WaterInOutput
+    public float obstacleDistance=0.01f;
 
     void Start()
     {
@@ -87,6 +90,13 @@ public class Simulation3D : MonoBehaviour
         Time.fixedDeltaTime = deltaTime;
 
         //MoveObstacle/*
+        if (cubeList != null)
+        {
+            // 獲取所有子物件中的指定組件，並加到 List 中
+            List<PcdParticleSpawner> PcdParticleSpawnerList = new List<PcdParticleSpawner>(pcdSpawner);
+            PcdParticleSpawnerList.AddRange(cubeList.GetComponentsInChildren<PcdParticleSpawner>());
+            pcdSpawner = PcdParticleSpawnerList.ToArray();
+        }
         //spawnData = spawner.GetSpawnData();
         Spawner3D.SpawnData waterSpawnData = spawner.GetSpawnData();
 
@@ -327,6 +337,8 @@ public class Simulation3D : MonoBehaviour
         compute.SetMatrix("worldToLocal", transform.worldToLocalMatrix);
 
         compute.SetInt("numWaterParticlesMask", numWaterParticlesMask);//WaterInOutput
+
+        compute.SetFloat("obstacleDistance", obstacleDistance);
 
         //MoveObstacle/*
         Matrix4x4[] matrixs = new Matrix4x4[pcdSpawner.Length];
