@@ -7,15 +7,13 @@ public class ParticleDisplay3D : MonoBehaviour
     public float scale;
     Mesh mesh;
     public Color col;
+    public float alpha;
     Material mat;
 
     ComputeBuffer argsBuffer;
     Bounds bounds;
 
-    public Gradient colourMap;
-    public int gradientResolution;
     public float velocityDisplayMax;
-    Texture2D gradientTexture;
     bool needsUpdate;
 
     public int meshResolution;
@@ -30,6 +28,7 @@ public class ParticleDisplay3D : MonoBehaviour
         mat = new Material(shader);
         mat.SetBuffer("Positions", sim.positionBuffer);
         mat.SetBuffer("Velocities", sim.velocityBuffer);
+        mat.SetBuffer("Densitys", sim.densityBuffer);
 
         mesh = SebStuff.SphereGenerator.GenerateSphereMesh(meshResolution);
         debug_MeshTriCount = mesh.triangles.Length / 3;
@@ -47,14 +46,9 @@ public class ParticleDisplay3D : MonoBehaviour
 
     void UpdateSettings()
     {
-        if (needsUpdate)
-        {
-            needsUpdate = false;
-            ParticleDisplay2D.TextureFromGradient(ref gradientTexture, gradientResolution, colourMap);
-            mat.SetTexture("ColourMap", gradientTexture);
-        }
         mat.SetFloat("scale", scale);
         mat.SetColor("colour", col);
+        mat.SetFloat("_Alpha",alpha);
         mat.SetFloat("velocityMax", velocityDisplayMax);
         if(simulation3D != null && !DebugMode)
         {

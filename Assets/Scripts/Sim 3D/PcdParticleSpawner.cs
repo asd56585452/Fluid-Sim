@@ -11,6 +11,8 @@ public class PcdParticleSpawner : MonoBehaviour
     public string pcdFilePath;
 
     public Rigidbody body;
+    float3 force;
+    float3 torque;
 
     public ParticleSpawnData GetSpawnData(uint id)
     {
@@ -125,8 +127,8 @@ public class PcdParticleSpawner : MonoBehaviour
     {
         if(body != null)
         {
-            body.AddForce(new Vector3(force.x, force.y, force.z));
-            body.AddTorque(new Vector3(torque.x, torque.y, torque.z));
+            body.AddForce(force);
+            body.AddTorque(torque);
         }
         
     }
