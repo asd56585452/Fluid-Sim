@@ -4,7 +4,8 @@ import numpy as np
 # 加載 Mesh
 # name = 'landscape'#20000
 # name = 'cube'#250
-name = '12219_boat_v2_L2'
+# name = '12219_boat_v2_L2'#500
+name = "Terrain"
 mesh = o3d.io.read_triangle_mesh(name+".ply")
 
 print(mesh)
@@ -15,7 +16,7 @@ if not mesh.has_vertex_normals():
 
 # 使用均勻點采樣從 Mesh 表面生成點雲
 # 你可以改變 points_num 來控制點雲密度
-points_num = 500  # 你可以調整這個值來增加或減少點的數量
+points_num = 20000  # 你可以調整這個值來增加或減少點的數量
 point_cloud = mesh.sample_points_poisson_disk(number_of_points=points_num, init_factor=10)
 
 # 計算法向量

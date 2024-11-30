@@ -3,7 +3,11 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - CinemachineTarget
+  - Iron_Block
+  - Rock_Block
+  - Wooden_Block
   layers:
   - Default
   - TransparentFX
@@ -11,10 +15,10 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
-  - 
-  - 
+  - Block
+  - PrevBlock
+  - InitBlock
+  - Terrain
   - 
   - 
   - 

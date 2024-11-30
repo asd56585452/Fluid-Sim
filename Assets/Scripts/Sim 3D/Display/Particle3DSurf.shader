@@ -1,86 +1,103 @@
-Shader "Instanced/Particle3DSurf" {
-	Properties{
-		_MainTex("Albedo (RGB)", 2D) = "white" {}
-		_Glossiness("Smoothness", Range(0,1)) = 0.5
-		_Metallic("Metallic", Range(0,1)) = 0.0
-	}
-		SubShader{
-			Tags { "RenderType" = "Opaque" }
-			LOD 200
+Shader "Instanced/Particle3DSurfUnlit" {
+    Properties{
+        _MainTex("Albedo (RGB)", 2D) = "white" {}
+        _Alpha("Alpha", Range(0,1)) = 0.5
+    }
+    SubShader{
+        Tags { "RenderType"="Transparent" "Queue"="Transparent" }
+        LOD 100
 
-			CGPROGRAM
-			#pragma surface surf Standard addshadow fullforwardshadows vertex:vert
-			#pragma multi_compile_instancing
-			#pragma instancing_options procedural:setup
+        Pass {
+            Blend SrcAlpha OneMinusSrcAlpha
+            ZWrite Off
 
-			sampler2D _MainTex;
+            CGPROGRAM
+            #include "UnityCG.cginc"
+            #include "UnityInstancing.cginc"
 
-			struct Input {
-				float2 uv_MainTex;
-				float4 colour;
-				float3 worldPos;
-			};
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
 
+            sampler2D _MainTex;
+            float _Alpha;
 
-		#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-			StructuredBuffer<float3> Positions;
-			StructuredBuffer<float3> Velocities;
-		#endif
+            struct appdata {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
 
+            struct v2f {
+                float2 uv : TEXCOORD0;
+                float4 vertex : SV_POSITION;
+                float4 color : COLOR0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
 
+            #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                StructuredBuffer<float3> Positions;
+                StructuredBuffer<float3> Velocities;
+                StructuredBuffer<float2> Densitys;
+            #endif
 
-			SamplerState linear_clamp_sampler;
-			float velocityMax;
+            SamplerState linear_clamp_sampler;
+            float velocityMax;
 
-			float scale;
-			float3 colour;
+            float scale;
+            float3 colour;
 
-			uint mask;//mask
+            uint mask; //mask
 
-			sampler2D ColourMap;
+            void setup()
+            {
+                #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                    float3 pos = Positions[unity_InstanceID];
 
-			void vert(inout appdata_full v, out Input o)
-			{
-				UNITY_INITIALIZE_OUTPUT(Input, o);
-				o.uv_MainTex = v.texcoord.xy;
+                    float s = scale * (unity_InstanceID < mask);
 
-	#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-				float speed = length(Velocities[unity_InstanceID]);
-				float speedT = saturate(speed / velocityMax);
-				float colT = speedT;
-				o.colour = float4(colT,1.0,1.0,1.0);
-				//o.colour = tex2Dlod(ColourMap, float4(colT, 0.5,0,0));//Can not in build work
-	#endif
-			}
+                    unity_ObjectToWorld._11_21_31_41 = float4(s, 0, 0, 0);
+                    unity_ObjectToWorld._12_22_32_42 = float4(0, s, 0, 0);
+                    unity_ObjectToWorld._13_23_33_43 = float4(0, 0, s, 0);
+                    unity_ObjectToWorld._14_24_34_44 = float4(pos, 1);
+                    unity_WorldToObject = unity_ObjectToWorld;
+                    unity_WorldToObject._14_24_34 *= -1;
+                    unity_WorldToObject._11_22_33 = 1.0f / unity_WorldToObject._11_22_33;
+                #endif
+            }
 
-			void setup()
-			{
-			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-				float3 pos = Positions[unity_InstanceID];
+            v2f vert(appdata v)
+            {
+                v2f o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
 
-				float s = scale*(unity_InstanceID<mask);
+                setup();
 
-				unity_ObjectToWorld._11_21_31_41 = float4(s, 0, 0, 0);
-				unity_ObjectToWorld._12_22_32_42 = float4(0, s, 0, 0);
-				unity_ObjectToWorld._13_23_33_43 = float4(0, 0, s, 0);
-				unity_ObjectToWorld._14_24_34_44 = float4(pos, 1);
-				unity_WorldToObject = unity_ObjectToWorld;
-				unity_WorldToObject._14_24_34 *= -1;
-				unity_WorldToObject._11_22_33 = 1.0f / unity_WorldToObject._11_22_33;
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.uv = v.uv;
 
-			#endif
-			}
+                #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                    // float speed = length(Velocities[unity_InstanceID]);
+                    // float speedT = saturate(speed / velocityMax);
+                    // float colT = speedT;
+                    o.color = float4(colour.x, colour.y, colour.z, _Alpha);
+                #else
+                    o.color = float4(1, 1, 1, _Alpha);
+                #endif
 
-			half _Glossiness;
-			half _Metallic;
+                return o;
+            }
 
-			void surf(Input IN, inout SurfaceOutputStandard o) {
-				o.Albedo = IN.colour;
-				o.Metallic = 0;
-				o.Smoothness = 0;
-				o.Alpha = 1;
-			}
-			ENDCG
-		}
-			FallBack "Diffuse"
+            float4 frag(v2f i) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(i);
+                return i.color;
+            }
+            ENDCG
+        }
+    }
+    FallBack "Diffuse"
 }

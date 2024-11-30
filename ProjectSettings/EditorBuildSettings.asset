@@ -4,5 +4,17 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/BuildMode.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/PlayMode.unity
+    guid: 615614e95177f1f43b864dd46acde07b
+  - enabled: 1
+    path: Assets/Scenes/BuildingDEMO.unity
+    guid: e0d1f00af61de0242927e724c1189f25
+  - enabled: 1
+    path: Assets/Scenes/SimulatingDEMO.unity
+    guid: f7a4c19fa2432d54999a4969f933b119
   m_configObjects: {}
